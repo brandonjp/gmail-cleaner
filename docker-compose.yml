@@ -1,0 +1,12 @@
+services:
+  gmail-cleaner:
+    build: .
+    ports:
+      - "8766:8766"  # Web UI
+      - "8767:8767"  # OAuth callback
+    volumes:
+      # Mount credentials file (required)
+      - ./credentials.json:/app/credentials.json:ro
+      # Optionally mount token file to persist auth across restarts
+      # - ./token.json:/app/token.json
+    restart: unless-stopped

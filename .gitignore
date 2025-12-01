@@ -28,3 +28,6 @@ IMPROVEMENTS.md
 .pytest_cache/
 htmlcov/
 coverage.xml
+
+# GitHub Copilot instructions (user specific)
+.github/copilot-instructions.md

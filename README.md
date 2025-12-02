@@ -33,7 +33,15 @@ Works on **all major platforms** - both Docker and local installation:
 | macOS Intel | Native | Native |
 | macOS Apple Silicon (M1/M2/M3/M4) | Native | Native |
 
-> The Docker image is multi-architecture (AMD64 + ARM64), so it runs natively on all platforms including Apple Silicon Macs.
+## Demo
+
+![Gmail Cleaner Demo](demo.gif)
+
+**[Watch Setup Video on YouTube](https://youtu.be/CmOWn8Tm5ZE)** - Step-by-step video on how to setup the repo and run the project locally.
+
+## Feature Requests
+
+Lets make this tool a better one by improving as much as possible, All features are welcome, To request a feature, [open a GitHub issue](https://github.com/Gururagavendra/gmail-cleaner/issues/new).
 
 ## Prerequisites
 
@@ -41,16 +49,6 @@ Works on **all major platforms** - both Docker and local installation:
 |--------|--------------|
 | **Docker** | [Docker Desktop](https://www.docker.com/products/docker-desktop/) |
 | **Local (Python)** | [Python 3.9+](https://www.python.org/downloads/) and [uv](https://docs.astral.sh/uv/getting-started/installation/) |
-
-## Demo
-
-![Gmail Cleaner Demo](demo.gif)
-
-**[Watch Setup Video on YouTube](https://youtu.be/CmOWn8Tm5ZE)** - Step-by-step guide to create OAuth credentials
-
-## Feature Requests
-
-To request a feature, [open a GitHub issue](https://github.com/Gururagavendra/gmail-cleaner/issues/new).
 
 ## Setup
 
@@ -82,30 +80,35 @@ To request a feature, [open a GitHub issue](https://github.com/Gururagavendra/gm
 
 ### 2. Clone the Repository
 
+1. Clone the repo:
 ```bash
 git clone https://github.com/Gururagavendra/gmail-cleaner.git
+```
+
+2. Navigate to the folder:
+```bash
 cd gmail-cleaner
 ```
 
-Put your `credentials.json` file in the project folder.
+3. Put your `credentials.json` file in the project folder.
 
 ## Usage
 
 ### Option A: Docker (Recommended)
 
-**Step 1:** Start the container
+1. Start the container:
 ```bash
 docker compose up -d
 ```
 
-**Step 2:** Open the app in your browser
+2. Open the app in your browser:
 ```
 http://localhost:8766
 ```
 
-**Step 3:** Click **"Sign In"** button in the web UI
+3. Click **"Sign In"** button in the web UI
 
-**Step 4:** Check logs for the OAuth URL (only after clicking Sign In!)
+4. Check logs for the OAuth URL (only after clicking Sign In!):
 ```bash
 docker logs $(docker ps -q --filter ancestor=ghcr.io/gururagavendra/gmail-cleaner)
 ```
@@ -114,9 +117,12 @@ Or if you built locally:
 docker logs $(docker ps -q --filter name=gmail-cleaner)
 ```
 
-**Step 5:** Copy the Google OAuth URL from logs, open in browser, and authorize
-
-> You'll see "Google hasn't verified this app" - this is normal! Click **Advanced** → **Go to Gmail Cleanup (unsafe)** to continue.
+5. Copy the Google OAuth URL from logs, open in browser, and authorize:
+   - Choose your Google account
+   - "Google hasn't verified this app" → Click **Continue**
+     > This warning appears because you created your own OAuth app (not published to Google). This is expected and safe - you control the app!
+   - Grant permissions → Click **Continue**
+   - Done! You'll see "Authentication flow has completed"
 
 ### Option B: Python (with uv)
 
@@ -165,9 +171,9 @@ This error means you're missing a step in the OAuth setup:
 
 ### "Error 403: access_denied"
 
-- Make sure you created your **own** Google Cloud project and credentials
-- Make sure your email is added as a **Test user**
-- Make sure you downloaded `credentials.json` and placed it in the project folder
+1. Make sure you created your **own** Google Cloud project and credentials
+2. Make sure your email is added as a **Test user**
+3. Make sure you downloaded `credentials.json` and placed it in the project folder
 
 ### Docker: "Where do I find the OAuth URL?"
 
@@ -198,9 +204,7 @@ If you see `OAuth error: (mismatching_state) CSRF Warning`:
 
 ### "Google hasn't verified this app" warning
 
-This is normal for personal OAuth apps! Click:
-1. **Advanced** (small link at bottom)
-2. **Go to Gmail Cleanup (unsafe)**
+This is normal for personal OAuth apps! Click **Continue** to proceed.
 
 This warning appears because your app isn't published to Google - which is exactly what we want for privacy!
 

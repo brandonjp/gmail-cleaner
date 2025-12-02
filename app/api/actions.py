@@ -13,6 +13,7 @@ from app.models import (
     UnsubscribeRequest,
     DeleteEmailsRequest,
     DeleteBulkRequest,
+    DownloadEmailsRequest,
 )
 from app.services import (
     scan_emails,
@@ -23,6 +24,7 @@ from app.services import (
     scan_senders_for_delete,
     delete_emails_by_sender,
     delete_emails_bulk,
+    download_emails_background,
 )
 
 router = APIRouter(prefix="/api", tags=["Actions"])
@@ -78,3 +80,10 @@ async def api_delete_emails(request: DeleteEmailsRequest):
 async def api_delete_emails_bulk(request: DeleteBulkRequest):
     """Delete emails from multiple senders."""
     return delete_emails_bulk(request.senders)
+
+
+@router.post("/download-emails")
+async def api_download_emails(request: DownloadEmailsRequest, background_tasks: BackgroundTasks):
+    """Start downloading email metadata for selected senders."""
+    background_tasks.add_task(download_emails_background, request.senders)
+    return {"status": "started"}

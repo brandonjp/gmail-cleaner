@@ -41,6 +41,17 @@ class AppState:
             "error": None
         }
         
+        # Download emails state
+        self.download_status: dict = {
+            "progress": 0,
+            "message": "Ready",
+            "done": False,
+            "error": None,
+            "total_emails": 0,
+            "fetched_count": 0,
+            "csv_data": None
+        }
+        
         # Auth state
         self.pending_auth_url: dict = {"url": None}
         self.pending_auth_code: dict = {"code": None}
@@ -73,6 +84,18 @@ class AppState:
             "done": False,
             "error": None,
             "marked_count": 0
+        }
+    
+    def reset_download(self):
+        """Reset download state."""
+        self.download_status = {
+            "progress": 0,
+            "message": "Ready",
+            "done": False,
+            "error": None,
+            "total_emails": 0,
+            "fetched_count": 0,
+            "csv_data": None
         }
 
 

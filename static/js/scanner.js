@@ -173,6 +173,7 @@ GmailCleaner.Scanner = {
                 btn.textContent = '✓ Done!';
                 btn.classList.remove('one-click');
                 btn.classList.add('success');
+                GmailCleaner.UI.showSuccessToast(`Successfully unsubscribed from ${r.domain}. You should stop receiving their emails.`);
             } else {
                 btn.textContent = 'Open →';
                 btn.classList.remove('one-click');
@@ -250,10 +251,21 @@ GmailCleaner.Scanner = {
             }
         }
         
-        let summary = '';
-        if (autoSuccess > 0) summary += `✓ ${autoSuccess} auto-unsubscribed\n`;
-        if (manualOpened > 0) summary += `🔗 ${manualOpened} opened (complete manually)`;
-        alert(summary || 'Done!');
+        // Show toast notification
+        let toastMessage = '';
+        if (autoSuccess > 0 && manualOpened > 0) {
+            toastMessage = `Successfully unsubscribed from ${autoSuccess} senders, ${manualOpened} links opened in tabs`;
+        } else if (autoSuccess > 0) {
+            toastMessage = `Successfully unsubscribed from ${autoSuccess} senders. You should stop receiving their emails.`;
+        } else if (manualOpened > 0) {
+            toastMessage = `Opened ${manualOpened} unsubscribe links in new tabs. Complete the process on each page.`;
+            GmailCleaner.UI.showInfoToast(toastMessage);
+            return;
+        }
+        
+        if (toastMessage) {
+            GmailCleaner.UI.showSuccessToast(toastMessage);
+        }
     },
 
     exportResults() {

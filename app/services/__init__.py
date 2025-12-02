@@ -32,4 +32,9 @@ from .gmail import (
     get_delete_scan_results,
     delete_emails_by_sender,
     delete_emails_bulk,
+    
+    # Download
+    download_emails_background,
+    get_download_status,
+    get_download_csv,
 )

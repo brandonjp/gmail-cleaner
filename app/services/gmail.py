@@ -483,7 +483,7 @@ def scan_senders_for_delete(limit: int = 1000, filters: Optional[dict] = None):
         state.delete_scan_status["message"] = f"Scanning {total} emails..."
         
         # Group by sender using Gmail Batch API
-        sender_counts: dict[str, dict] = defaultdict(lambda: {"count": 0, "sender": "", "email": "", "subjects": []})
+        sender_counts: dict[str, dict] = defaultdict(lambda: {"count": 0, "sender": "", "email": "", "subjects": [], "message_ids": [], "total_size": 0})
         processed = 0
         batch_size = 100
         
@@ -497,10 +497,14 @@ def scan_senders_for_delete(limit: int = 1000, filters: Optional[dict] = None):
             headers = response.get('payload', {}).get('headers', [])
             sender_name, sender_email = _get_sender_info(headers)
             subject = _get_subject(headers)
+            msg_id = response.get('id', '')
+            size_estimate = response.get('sizeEstimate', 0)
             if sender_email:
                 sender_counts[sender_email]["count"] += 1
                 sender_counts[sender_email]["sender"] = sender_name
                 sender_counts[sender_email]["email"] = sender_email
+                sender_counts[sender_email]["message_ids"].append(msg_id)
+                sender_counts[sender_email]["total_size"] += size_estimate
                 if len(sender_counts[sender_email]["subjects"]) < 3:
                     sender_counts[sender_email]["subjects"].append(subject)
         
@@ -558,11 +562,18 @@ def get_delete_scan_results() -> list:
 def delete_emails_by_sender(sender: str) -> dict:
     """Delete all emails from a specific sender."""
     if not sender:
-        return {"success": False, "deleted": 0, "message": "No sender specified"}
+        return {"success": False, "deleted": 0, "size_freed": 0, "message": "No sender specified"}
+    
+    # Get size info from cached results before deleting
+    size_freed = 0
+    for r in state.delete_scan_results:
+        if r.get("email") == sender:
+            size_freed = r.get("total_size", 0)
+            break
     
     service, error = get_gmail_service()
     if error:
-        return {"success": False, "deleted": 0, "message": error}
+        return {"success": False, "deleted": 0, "size_freed": 0, "message": error}
     
     try:
         # Find all emails from sender
@@ -577,7 +588,7 @@ def delete_emails_by_sender(sender: str) -> dict:
             messages.extend(results.get('messages', []))
         
         if not messages:
-            return {"success": True, "deleted": 0, "message": "No emails found"}
+            return {"success": True, "deleted": 0, "size_freed": 0, "message": "No emails found"}
         
         # Batch delete (move to trash)
         ids = [msg['id'] for msg in messages]
@@ -598,24 +609,26 @@ def delete_emails_by_sender(sender: str) -> dict:
             if r.get("email") != sender
         ]
         
-        return {"success": True, "deleted": deleted, "message": f"Moved {deleted} emails to trash"}
+        return {"success": True, "deleted": deleted, "size_freed": size_freed, "message": f"Moved {deleted} emails to trash"}
         
     except Exception as e:
-        return {"success": False, "deleted": 0, "message": str(e)}
+        return {"success": False, "deleted": 0, "size_freed": 0, "message": str(e)}
 
 
 def delete_emails_bulk(senders: list[str]) -> dict:
     """Delete emails from multiple senders."""
     if not senders:
-        return {"success": False, "deleted": 0, "message": "No senders specified"}
+        return {"success": False, "deleted": 0, "size_freed": 0, "message": "No senders specified"}
     
     total_deleted = 0
+    total_size_freed = 0
     errors = []
     
     for sender in senders:
         result = delete_emails_by_sender(sender)
         if result["success"]:
             total_deleted += result["deleted"]
+            total_size_freed += result.get("size_freed", 0)
         else:
             errors.append(f"{sender}: {result['message']}")
     
@@ -625,9 +638,174 @@ def delete_emails_bulk(senders: list[str]) -> dict:
         return {
             "success": len(errors) < len(senders),
             "deleted": total_deleted,
+            "size_freed": total_size_freed,
             "message": f"Deleted {total_deleted} emails. Errors: {'; '.join(errors[:3])}"
         }
     
     if total_deleted == 0:
-        return {"success": False, "deleted": 0, "message": "No emails found to delete"}
-    return {"success": True, "deleted": total_deleted, "message": f"Deleted {total_deleted} emails"}
+        return {"success": False, "deleted": 0, "size_freed": 0, "message": "No emails found to delete"}
+    return {"success": True, "deleted": total_deleted, "size_freed": total_size_freed, "message": f"Deleted {total_deleted} emails"}
+
+
+# ----- Download Emails Functions -----
+
+def download_emails_background(senders: list[str]) -> None:
+    """Download email metadata for selected senders as CSV (background task).
+    
+    Uses message IDs stored during scan to download only scanned emails.
+    """
+    import csv
+    import io
+    import base64
+    
+    state.reset_download()
+    
+    if not senders:
+        state.download_status["done"] = True
+        state.download_status["error"] = "No senders specified"
+        return
+    
+    service, error = get_gmail_service()
+    if error:
+        state.download_status["done"] = True
+        state.download_status["error"] = error
+        return
+    
+    state.download_status["message"] = "Collecting emails from scan results..."
+    
+    # Get message IDs from scan results (only emails we actually scanned)
+    all_message_ids = []
+    for sender in senders:
+        for result in state.delete_scan_results:
+            if result.get("email") == sender:
+                all_message_ids.extend(result.get("message_ids", []))
+                break
+    
+    if not all_message_ids:
+        state.download_status["progress"] = 100
+        state.download_status["done"] = True
+        state.download_status["error"] = "No emails found in scan results"
+        return
+    
+    total_emails = len(all_message_ids)
+    state.download_status["total_emails"] = total_emails
+    state.download_status["message"] = f"Fetching {total_emails} emails..."
+    
+    # Helper to decode base64 email content
+    def decode_base64_content(data: str) -> str:
+        """Decode base64 URL-safe encoded email content."""
+        return base64.urlsafe_b64decode(data).decode('utf-8', errors='ignore')
+    
+    # Helper function to extract email body
+    def get_email_body(payload):
+        """Extract email body from payload. Prefers text/plain over text/html."""
+        body = ""
+        
+        if 'body' in payload and payload['body'].get('data'):
+            body = decode_base64_content(payload['body']['data'])
+        elif 'parts' in payload:
+            for part in payload['parts']:
+                mime_type = part.get('mimeType', '')
+                if mime_type == 'text/plain':
+                    if 'body' in part and part['body'].get('data'):
+                        body = decode_base64_content(part['body']['data'])
+                        break
+                elif mime_type == 'text/html' and not body:
+                    if 'body' in part and part['body'].get('data'):
+                        body = decode_base64_content(part['body']['data'])
+                elif 'parts' in part:
+                    body = get_email_body(part)
+                    if body:
+                        break
+        
+        return body.strip()
+    
+    # Fetch full email content in batches
+    email_data = []
+    batch_size = 50  # Smaller batches for full content
+    fetched = 0
+    
+    try:
+        for i in range(0, total_emails, batch_size):
+            batch_ids = all_message_ids[i:i + batch_size]
+            
+            batch = service.new_batch_http_request()
+            batch_results = []
+            
+            def callback(request_id, response, exception):
+                if exception is None and response:
+                    batch_results.append(response)
+            
+            for msg_id in batch_ids:
+                batch.add(
+                    service.users().messages().get(
+                        userId='me',
+                        id=msg_id,
+                        format='full'
+                    ),
+                    callback=callback
+                )
+            
+            batch.execute()
+            
+            # Process batch results
+            for msg in batch_results:
+                headers = {h['name']: h['value'] for h in msg.get('payload', {}).get('headers', [])}
+                body = get_email_body(msg.get('payload', {}))
+                
+                email_data.append({
+                    'message_id': msg.get('id', ''),
+                    'thread_id': msg.get('threadId', ''),
+                    'from': headers.get('From', ''),
+                    'subject': headers.get('Subject', ''),
+                    'date': headers.get('Date', ''),
+                    'labels': ', '.join(msg.get('labelIds', [])),
+                    'snippet': msg.get('snippet', '')[:100],
+                    'body': body[:50000] if body else ''  # Limit to 50,000 characters
+                })
+            
+            fetched += len(batch_ids)
+            state.download_status["fetched_count"] = fetched
+            state.download_status["progress"] = int((fetched / total_emails) * 95)
+            state.download_status["message"] = f"Fetched {fetched}/{total_emails} emails..."
+    
+    except Exception as e:
+        state.download_status["done"] = True
+        state.download_status["error"] = f"Error fetching emails: {str(e)}"
+        return
+    
+    # Generate CSV
+    state.download_status["progress"] = 98
+    state.download_status["message"] = "Generating CSV..."
+    
+    try:
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=['message_id', 'thread_id', 'from', 'subject', 'date', 'labels', 'snippet', 'body'])
+        writer.writeheader()
+        writer.writerows(email_data)
+        
+        state.download_status["csv_data"] = output.getvalue()
+        state.download_status["progress"] = 100
+        state.download_status["done"] = True
+        state.download_status["message"] = f"Ready to download {len(email_data)} emails"
+    
+    except Exception as e:
+        state.download_status["done"] = True
+        state.download_status["error"] = f"Error generating CSV: {str(e)}"
+
+
+def get_download_status() -> dict:
+    """Get download operation status (without CSV data)."""
+    return {
+        "progress": state.download_status["progress"],
+        "message": state.download_status["message"],
+        "done": state.download_status["done"],
+        "error": state.download_status["error"],
+        "total_emails": state.download_status["total_emails"],
+        "fetched_count": state.download_status["fetched_count"]
+    }
+
+
+def get_download_csv() -> str | None:
+    """Get the generated CSV data."""
+    return state.download_status.get("csv_data")

@@ -82,6 +82,11 @@ class DeleteBulkRequest(BaseModel):
     senders: list[str] = Field(default=[], max_length=50, description="List of sender addresses (max 50)")
 
 
+class DownloadEmailsRequest(BaseModel):
+    """Request to download emails from selected senders."""
+    senders: list[str] = Field(default=[], max_length=50, description="List of sender addresses (max 50)")
+
+
 # ----- Response Models -----
 
 class StatusResponse(BaseModel):

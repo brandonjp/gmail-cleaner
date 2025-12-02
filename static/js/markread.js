@@ -60,7 +60,7 @@ GmailCleaner.MarkRead = {
             });
             this.pollProgress();
         } catch (error) {
-            alert('Error: ' + error.message);
+            GmailCleaner.UI.showErrorToast('Error: ' + error.message);
             this.resetButton();
         }
     },
@@ -79,9 +79,17 @@ GmailCleaner.MarkRead = {
             if (status.done) {
                 this.resetButton();
                 if (!status.error) {
+                    // Show toast notification
+                    if (status.marked_count > 0) {
+                        GmailCleaner.UI.showSuccessToast(
+                            `Successfully marked ${status.marked_count.toLocaleString()} emails as read. Your inbox is cleaner now!`
+                        );
+                    } else {
+                        GmailCleaner.UI.showInfoToast('No unread emails found matching the selected filters.');
+                    }
                     this.refreshUnreadCount();
                 } else {
-                    alert('Error: ' + status.error);
+                    GmailCleaner.UI.showErrorToast('Error: ' + status.error);
                 }
             } else {
                 setTimeout(() => this.pollProgress(), 300);

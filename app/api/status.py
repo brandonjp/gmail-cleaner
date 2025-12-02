@@ -15,6 +15,8 @@ from app.services import (
     get_mark_read_status,
     get_delete_scan_status,
     get_delete_scan_results,
+    get_download_status,
+    get_download_csv,
 )
 
 router = APIRouter(prefix="/api", tags=["Status"])
@@ -66,3 +68,28 @@ async def api_delete_scan_status():
 async def api_delete_scan_results():
     """Get delete scan results (senders grouped by count)."""
     return get_delete_scan_results()
+
+
+@router.get("/download-status")
+async def api_download_status():
+    """Get download operation status."""
+    return get_download_status()
+
+
+@router.get("/download-csv")
+async def api_download_csv():
+    """Get the generated CSV file."""
+    from fastapi.responses import Response
+    
+    csv_data = get_download_csv()
+    if not csv_data:
+        return {"error": "No CSV data available"}
+    
+    from datetime import datetime
+    filename = f"emails-backup-{datetime.now().strftime('%Y-%m-%d-%H%M%S')}.csv"
+    
+    return Response(
+        content=csv_data,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )

@@ -59,33 +59,37 @@ class Settings(BaseSettings):
             if os.path.isabs(self.token_file):
                 # If token_file is absolute, verify it's within /app/data
                 resolved_path = os.path.abspath(os.path.realpath(self.token_file))
+                # Unsafe conditions: path traversal, points to base_dir, or is a directory
                 if (
                     not resolved_path.startswith(base_dir + os.sep)
-                    and resolved_path != base_dir
+                    or resolved_path == base_dir
+                    or os.path.isdir(resolved_path)
                 ):
-                    # Absolute path outside /app/data - use safe fallback
+                    # Absolute path unsafe - use safe fallback
                     self.token_file = os.path.join(
                         base_dir, os.path.basename(self.token_file)
                     )
                 else:
-                    # Valid absolute path within /app/data
+                    # Valid absolute path within /app/data (file, not directory)
                     self.token_file = resolved_path
             else:
                 # Relative path - join and validate
                 candidate_path = os.path.join(base_dir, self.token_file)
                 resolved_path = os.path.abspath(os.path.realpath(candidate_path))
 
-                # Verify resolved path is within base_dir (prevents path traversal)
+                # Verify resolved path is within base_dir and is a file (prevents path traversal)
+                # Unsafe conditions: path traversal, points to base_dir, or is a directory
                 if (
                     not resolved_path.startswith(base_dir + os.sep)
-                    and resolved_path != base_dir
+                    or resolved_path == base_dir
+                    or os.path.isdir(resolved_path)
                 ):
-                    # Path traversal detected - use safe fallback with basename only
+                    # Path traversal detected or directory path - use safe fallback with basename only
                     self.token_file = os.path.join(
                         base_dir, os.path.basename(self.token_file)
                     )
                 else:
-                    # Safe path - use resolved path
+                    # Safe path - use resolved path (file, not directory)
                     self.token_file = resolved_path
 
     # Gmail API

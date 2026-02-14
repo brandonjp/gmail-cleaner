@@ -167,7 +167,7 @@ GmailCleaner.Delete = {
                 <div class="result-content">
                     <div class="result-sender">${GmailCleaner.UI.escapeHtml(r.email)}</div>
                     <div class="result-subject">${r.message_ids && r.message_ids[0]
-                        ? `<a href="https://mail.google.com/mail/u/0/#all/${encodeURIComponent(r.message_ids[0])}" target="_blank" rel="noopener noreferrer" class="subject-gmail-link" title="Open in Gmail">${GmailCleaner.UI.escapeHtml(r.subjects[0] || 'No subject')}<span class="gmail-link-icon" aria-hidden="true">\u2197</span></a>`
+                        ? `<a href="${GmailCleaner.UI.gmailUrl(r.message_ids[0])}" target="_blank" rel="noopener noreferrer" class="subject-gmail-link" title="Open in Gmail">${GmailCleaner.UI.escapeHtml(r.subjects[0] || 'No subject')}<span class="gmail-link-icon" aria-hidden="true">\u2197</span></a>`
                         : GmailCleaner.UI.escapeHtml(r.subjects[0] || 'No subject')
                     }</div>
                     <div class="result-meta">

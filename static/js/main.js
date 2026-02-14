@@ -9,7 +9,8 @@ window.GmailCleaner = {
     deleteResults: [],
     scanning: false,
     deleteScanning: false,
-    currentView: 'login'
+    currentView: 'login',
+    userEmail: null
 };
 
 // Initialize on page load

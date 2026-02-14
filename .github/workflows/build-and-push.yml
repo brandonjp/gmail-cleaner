@@ -23,6 +23,7 @@ name: Build and Publish Docker images
 on:
   release:
     types: [created]
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io

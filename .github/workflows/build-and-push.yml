@@ -1,16 +1,5 @@
-# GitHub authenticates as you when using ${{ secrets.GITHUB_TOKEN }}.
-# Improve this workflow security with a GitHub PAT. Make one with the "Note" as GHCR_GMAIL_CLEANER_PAT here:
-# https://github.com/settings/tokens
-# then check the following permissions:
-#  repo
-#   ...
-#  workflow
-#  write:packages
-#   ...
-# Click generate, <copy to clipboard>
-# You just created a PAT
-# visit your repo, Settings -> Secrets & Variables -> Actions -> Repo Secrets -> New
-# Name: GHCR_GMAIL_CLEANER_PAT; Secret: <paste from clipboard>
+# Builds multi-arch Docker images and pushes to GitHub Container Registry (ghcr.io).
+# Uses the built-in GITHUB_TOKEN with packages:write permission — no PAT needed.
 
 name: Build and Publish Docker images
 
@@ -23,6 +12,7 @@ name: Build and Publish Docker images
 on:
   release:
     types: [created]
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -32,6 +22,9 @@ jobs:
   # define the job to build and publish docker images
   build-and-push-docker-images:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     # steps to perform in the job
     steps:
@@ -62,7 +55,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_GMAIL_CLEANER_PAT }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       # https://github.com/docker/build-push-action
       - name: Build and push image to GitHub Container Registry

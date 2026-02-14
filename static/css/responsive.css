@@ -116,6 +116,10 @@
         width: 100%;
     }
 
+    .gmail-link-icon {
+        opacity: 0.5;
+    }
+
     .result-actions {
         width: 100%;
         margin-left: 0;

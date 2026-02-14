@@ -317,6 +317,41 @@
     white-space: nowrap;
 }
 
+/* Gmail "Open in Gmail" subject link */
+.subject-gmail-link {
+    color: var(--text-secondary);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.subject-gmail-link:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+
+.gmail-link-icon {
+    display: inline-block;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    flex-shrink: 0;
+    margin-left: 2px;
+}
+
+.result-item:hover .gmail-link-icon {
+    opacity: 0.7;
+}
+
+.subject-gmail-link:hover .gmail-link-icon {
+    opacity: 1;
+}
+
 .result-count {
     background: var(--hover-bg);
     color: var(--text-secondary);

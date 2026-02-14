@@ -20,6 +20,7 @@ GmailCleaner.Auth = {
         const userSection = document.getElementById('userSection');
 
         if (authStatus.logged_in && authStatus.email) {
+            GmailCleaner.userEmail = authStatus.email;
             const safeEmail = GmailCleaner.UI.escapeHtml(authStatus.email);
             const initial = authStatus.email.charAt(0).toUpperCase();
             userSection.innerHTML = `
@@ -33,6 +34,7 @@ GmailCleaner.Auth = {
             // Load labels for filter dropdown
             this.loadLabelsForFilter();
         } else {
+            GmailCleaner.userEmail = null;
             userSection.innerHTML = '';
             GmailCleaner.Filters.showBar(false);
             GmailCleaner.UI.showView('login');

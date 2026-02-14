@@ -135,6 +135,11 @@ GmailCleaner.UI = {
 
     showInfoToast(message) {
         this.showToast(message, 'info', 4000);
+    },
+
+    gmailUrl(messageId) {
+        const authuser = GmailCleaner.userEmail ? `?authuser=${encodeURIComponent(GmailCleaner.userEmail)}` : '';
+        return `https://mail.google.com/mail/${authuser}#all/${encodeURIComponent(messageId)}`;
     }
 };
 
